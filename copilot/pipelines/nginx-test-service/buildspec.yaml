@@ -1,0 +1,31 @@
+version: 0.2
+
+phases:
+  pre_build:
+    commands:
+      - echo "Logging in to Amazon ECR..."
+      - IMAGE_TAG=$(echo $CODEBUILD_RESOLVED_SOURCE_VERSION | cut -c1-7)
+      - aws ecr get-login-password --region $AWS_REGION |
+        docker login --username AWS --password-stdin \
+        412345678991.dkr.ecr.$AWS_REGION.amazonaws.com
+
+  build:
+    commands:
+      - echo "Building Docker image once..."
+      - docker build \
+        -f code/single-build/Dockerfile \
+        -t nginx-test-service:$IMAGE_TAG \
+        code/single-build
+      - docker tag nginx-test-service:$IMAGE_TAG \
+        412345678991.dkr.ecr.$AWS_REGION.amazonaws.com/bb-test/nginx-test-service:$IMAGE_TAG
+
+  post_build:
+    commands:
+      - echo "Pushing Docker image..."
+      - docker push \
+        445567115651.dkr.ecr.$AWS_REGION.amazonaws.com/bb-test/nginx-test-service:$IMAGE_TAG
+      - echo "IMAGE_TAG=$IMAGE_TAG" > image.env
+
+artifacts:
+  files:
+    - image.env
